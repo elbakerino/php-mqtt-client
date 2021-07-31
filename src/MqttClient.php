@@ -19,6 +19,7 @@ use PhpMqtt\Client\Exceptions\PendingMessageAlreadyExistsException;
 use PhpMqtt\Client\Exceptions\PendingMessageNotFoundException;
 use PhpMqtt\Client\Exceptions\ProtocolNotSupportedException;
 use PhpMqtt\Client\Exceptions\ProtocolViolationException;
+use PhpMqtt\Client\MessageProcessors\Mqtt311MessageProcessor;
 use PhpMqtt\Client\MessageProcessors\Mqtt31MessageProcessor;
 use PhpMqtt\Client\Repositories\MemoryRepository;
 use Psr\Log\LoggerInterface;
@@ -35,6 +36,7 @@ class MqttClient implements ClientContract
         ValidatesConfiguration;
 
     const MQTT_3_1 = '3.1';
+    const MQTT_3_1_1 = '3.1.1';
 
     const QOS_AT_MOST_ONCE  = 0;
     const QOS_AT_LEAST_ONCE = 1;
@@ -56,6 +58,7 @@ class MqttClient implements ClientContract
 
     /** @var resource|null */
     protected $socket;
+    protected $supported_versions = [self::MQTT_3_1, self::MQTT_3_1_1,];
 
     /**
      * Constructs a new MQTT client which subsequently supports publishing and subscribing
@@ -84,7 +87,7 @@ class MqttClient implements ClientContract
         LoggerInterface $logger = null
     )
     {
-        if (!in_array($protocol, [self::MQTT_3_1])) {
+        if (!in_array($protocol, $this->supported_versions)) {
             throw new ProtocolNotSupportedException($protocol);
         }
 
@@ -95,6 +98,9 @@ class MqttClient implements ClientContract
         $this->logger     = new Logger($this->host, $this->port, $this->clientId, $logger);
 
         switch ($protocol) {
+            case self::MQTT_3_1_1:
+                $this->messageProcessor = new Mqtt311MessageProcessor($this->clientId, $this->logger);
+            break;
             case self::MQTT_3_1:
             default:
                 $this->messageProcessor = new Mqtt31MessageProcessor($this->clientId, $this->logger);
